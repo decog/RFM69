@@ -38,17 +38,17 @@
 // **********************************************************************************
 #include <RFM69.h>         //get it here: https://www.github.com/lowpowerlab/rfm69
 #include <SPI.h>
-#include <SPIFlash.h>      //get it here: https://www.github.com/lowpowerlab/spiflash
+#include <SPIFlashA.h>      //get it for Anarduino MiniWireless here: https://github.com/rrobinet/SPIFlashA
 #include <avr/wdt.h>
-#include <WirelessHEX69.h> //get it here: https://github.com/LowPowerLab/WirelessProgramming/tree/master/WirelessHEX69
+#include <WirelessAnarduinoHEX69.h> //get it here: https://github.com/rrobinet/WirelessAnarduinoHEX69
 
 #define NODEID      123       // node ID used for this unit
 #define NETWORKID   250
 //Match frequency to the hardware version of the radio on your Moteino (uncomment one):
-//#define FREQUENCY   RF69_433MHZ
+#define FREQUENCY   RF69_433MHZ
 //#define FREQUENCY   RF69_868MHZ
-#define FREQUENCY     RF69_915MHZ
-//#define IS_RFM69HW  //uncomment only for RFM69HW! Leave out if you have RFM69W!
+//#define FREQUENCY     RF69_915MHZ
+#define IS_RFM69HW  //uncomment only for RFM69HW (to release the power)! Leave out if you have RFM69W!
 #define SERIAL_BAUD 115200
 #define ACK_TIME    30  // # of ms to wait for an ack
 #define ENCRYPTKEY "sampleEncryptKey" //(16 bytes of your choice - keep the same on all encrypted nodes)
@@ -59,7 +59,7 @@
   #define FLASH_SS      23 // and FLASH SS on D23
 #else
   #define LED           9 // Moteinos hsave LEDs on D9
-  #define FLASH_SS      8 // and FLASH SS on D8
+  #define FLASH_SS      5 // and FLASH SS on D5 (see http://www.anarduino.com/miniwireless/ for schematic)
 #endif
 
 RFM69 radio;
@@ -72,18 +72,32 @@ long lastPeriod = -1;
 // MANUFACTURER_ID - OPTIONAL, 0x1F44 for adesto(ex atmel) 4mbit flash
 //                             0xEF30 for windbond 4mbit flash
 //                             0xEF40 for windbond 16/64mbit flash
+//                             0x12018 for Spanion 128mbit flash
 /////////////////////////////////////////////////////////////////////////////
-SPIFlash flash(FLASH_SS, 0xEF30); //EF30 for windbond 4mbit flash
+SPIFlash flash(FLASH_SS, 0x12018); //12018 for Spanion 128mbit flash
 
 void setup(){
   pinMode(LED, OUTPUT);
+  
   Serial.begin(SERIAL_BAUD);
+  Serial.print("Serial Debug Out @ ", SERIAL_BAUD); //Aggressively verbose for now, I want lots of chatter
+  
   radio.initialize(FREQUENCY,NODEID,NETWORKID);
+  Serial.println("RF Transciever @ ", FREQUENCY);
+  Serial.println("Node ID: ", NODEID);
+  Serial.println("Network ID: ", NETWORKID);
+  
   radio.encrypt(ENCRYPTKEY); //OPTIONAL
+  
+  if(ENCRYPTKEY=="sampleEncryptKey"){
+  Serial.println("Default encryption key still set!");
+  }
 #ifdef IS_RFM69HW
   radio.setHighPower(); //only for RFM69HW!
+  Serial.println("Set power: High");
 #endif
-  Serial.print("Start node...");
+  
+  Serial.println("Start node...");
 
   if (flash.initialize())
     Serial.println("SPI Flash Init OK!");
